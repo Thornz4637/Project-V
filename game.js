@@ -241,85 +241,121 @@ function collides(x, z) {
 const weapon = new THREE.Group();
 camera.add(weapon);
 
-// Rounded parts make the prop feel like one designed object.
-function roundedPart(parent, size, position, material, radius = 0.06) {
-    const geometry = new RoundedBoxGeometry(
-        size[0], size[1], size[2], 3, radius
+// Dedicated weapon lighting
+const weaponLight = new THREE.PointLight(0xffffff, 2.2, 4);
+weaponLight.position.set(-1, 1, 1);
+camera.add(weaponLight);
+
+// Materials
+const gunBody = new THREE.MeshStandardMaterial({
+    color: 0x25292d,
+    metalness: 0.65,
+    roughness: 0.38
+});
+
+const gunPolymer = new THREE.MeshStandardMaterial({
+    color: 0x171a1d,
+    metalness: 0.15,
+    roughness: 0.72
+});
+
+const gunMetal = new THREE.MeshStandardMaterial({
+    color: 0x555b60,
+    metalness: 0.85,
+    roughness: 0.3
+});
+
+const gunRubber = new THREE.MeshStandardMaterial({
+    color: 0x101214,
+    roughness: 0.95
+});
+
+const gunLens = new THREE.MeshBasicMaterial({
+    color: 0x69a8bd
+});
+
+function gunPart(parent, size, pos, material, radius = 0.025) {
+    const geo = new RoundedBoxGeometry(
+        size[0], size[1], size[2], 4, radius
     );
 
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(...position);
+    const mesh = new THREE.Mesh(geo, material);
+    mesh.position.set(...pos);
     mesh.castShadow = true;
-    mesh.receiveShadow = true;
     parent.add(mesh);
-
     return mesh;
 }
 
-function cylinderPart(parent, radiusTop, radiusBottom, length, position, material) {
-    const geometry = new THREE.CylinderGeometry(
-        radiusTop, radiusBottom, length, 20
+function gunCylinder(parent, radius, length, pos, material) {
+    const geo = new THREE.CylinderGeometry(
+        radius, radius, length, 24
     );
 
-    const mesh = new THREE.Mesh(geometry, material);
-
-    // Cylinders normally point up; rotate them to point forward.
+    const mesh = new THREE.Mesh(geo, material);
     mesh.rotation.x = Math.PI / 2;
-    mesh.position.set(...position);
+    mesh.position.set(...pos);
     parent.add(mesh);
-
     return mesh;
 }
 
 // Main receiver
-roundedPart(weapon, [0.23, 0.22, 0.58], [0, 0, 0], polymer, 0.055);
+gunPart(weapon, [0.24, 0.22, 0.58], [0, 0, 0], gunBody, 0.045);
 
-// Upper housing
-roundedPart(weapon, [0.20, 0.12, 0.48], [0, 0.13, -0.035], metal, 0.045);
+// Upper receiver
+gunPart(weapon, [0.21, 0.11, 0.49], [0, 0.13, -0.035], gunMetal);
 
 // Front handguard
-roundedPart(weapon, [0.21, 0.17, 0.34], [0, -0.015, -0.38], black, 0.055);
+gunPart(weapon, [0.22, 0.18, 0.38], [0, -0.015, -0.40], gunPolymer, 0.04);
 
 // Rear stock
-roundedPart(weapon, [0.19, 0.15, 0.27], [0, 0.015, 0.39], polymer, 0.045);
-roundedPart(weapon, [0.22, 0.20, 0.08], [0, 0.015, 0.55], black, 0.035);
+gunPart(weapon, [0.19, 0.15, 0.28], [0, 0.015, 0.39], gunPolymer);
+gunPart(weapon, [0.23, 0.20, 0.07], [0, 0.015, 0.56], gunRubber);
 
-// Fictional front barrel housing
-cylinderPart(weapon, 0.045, 0.045, 0.28, [0, 0.035, -0.64], metal);
-cylinderPart(weapon, 0.065, 0.065, 0.09, [0, 0.035, -0.81], black);
+// Front assembly
+gunCylinder(weapon, 0.045, 0.25, [0, 0.035, -0.68], gunMetal);
+gunCylinder(weapon, 0.065, 0.09, [0, 0.035, -0.83], gunRubber);
 
 // Magazine
-roundedPart(weapon, [0.13, 0.31, 0.17], [0, -0.245, 0.04], black, 0.055);
-roundedPart(weapon, [0.14, 0.035, 0.18], [0, -0.405, 0.04], metal, 0.025);
+gunPart(weapon, [0.14, 0.32, 0.17], [0, -0.245, 0.04], gunRubber, 0.04);
+gunPart(weapon, [0.145, 0.035, 0.18], [0, -0.41, 0.04], gunMetal);
 
 // Grip
-const grip = roundedPart(
-    weapon, [0.13, 0.26, 0.15], [0, -0.22, 0.23], polymer, 0.045
+const gunGrip = gunPart(
+    weapon, [0.13, 0.25, 0.15],
+    [0, -0.22, 0.23], gunPolymer, 0.035
 );
-grip.rotation.x = -0.18;
+gunGrip.rotation.x = -0.18;
 
-// Small optic
-roundedPart(weapon, [0.13, 0.07, 0.14], [0, 0.245, -0.06], black, 0.025);
-roundedPart(weapon, [0.085, 0.085, 0.085], [0, 0.31, -0.06], accent, 0.025);
+// Optic
+gunPart(weapon, [0.14, 0.07, 0.15], [0, 0.235, -0.06], gunRubber);
+gunPart(weapon, [0.09, 0.09, 0.09], [0, 0.30, -0.06], gunMetal);
 
-// Optic lens
-const lens = new THREE.Mesh(
-    new THREE.BoxGeometry(0.065, 0.055, 0.012),
-    new THREE.MeshBasicMaterial({ color: 0x83b9c9 })
-);
-lens.position.set(0, 0.31, -0.105);
-weapon.add(lens);
+gunPart(weapon, [0.065, 0.06, 0.015],
+    [0, 0.30, -0.11], gunLens);
 
-// Side detailing
-roundedPart(weapon, [0.025, 0.07, 0.22], [0.125, 0.025, -0.34], accent, 0.01);
-roundedPart(weapon, [0.025, 0.045, 0.16], [-0.125, 0.025, -0.32], metal, 0.01);
+// Side panels
+gunPart(weapon, [0.025, 0.08, 0.23],
+    [0.13, 0.015, -0.35], gunMetal, 0.008);
 
-// Small top rail
-roundedPart(weapon, [0.07, 0.025, 0.34], [0, 0.215, -0.28], black, 0.01);
+gunPart(weapon, [0.025, 0.08, 0.23],
+    [-0.13, 0.015, -0.35], gunPolymer, 0.008);
 
-// Position in the camera view
-weapon.position.set(0.34, -0.32, -0.58);
-weapon.rotation.set(0.02, -0.04, 0);
+// Top rail
+gunPart(weapon, [0.075, 0.025, 0.38],
+    [0, 0.205, -0.27], gunRubber, 0.008);
+
+// Force the weapon to render above the environment
+weapon.traverse(obj => {
+    if (obj.isMesh) {
+        obj.material = obj.material.clone();
+        obj.material.depthTest = true;
+        obj.renderOrder = 10;
+    }
+});
+
+// Weapon position
+weapon.position.set(0.48, -0.37, -0.72);
+weapon.rotation.set(0.02, -0.06, 0);
 
 // ==========================================
 // HUD
@@ -426,37 +462,45 @@ function update(delta) {
     camera.rotation.y = yaw;
     camera.rotation.x = pitch;
 
-    // Weapon sway
-    const swayX = THREE.MathUtils.clamp(mouseDX * 0.0007, -0.08, 0.08);
-    const swayY = THREE.MathUtils.clamp(mouseDY * 0.0007, -0.08, 0.08);
+   // Weapon sway and walking animation
 
-    weapon.position.x = smooth(
-        weapon.position.x,
-        0.34 - swayX,
-        Math.min(1, delta * 10)
-    );
+const swayX = THREE.MathUtils.clamp(
+    mouseDX * 0.0007, -0.08, 0.08
+);
 
-    weapon.position.y = smooth(
-        weapon.position.y,
-        -0.32 - swayY + (moving ? Math.sin(walkTime) * 0.012 : 0),
-        Math.min(1, delta * 10)
-    );
+const swayY = THREE.MathUtils.clamp(
+    mouseDY * 0.0007, -0.08, 0.08
+);
 
-    weapon.rotation.y = smooth(
-        weapon.rotation.y,
-        -0.04 - swayX * 0.4,
-        Math.min(1, delta * 8)
-    );
+const bobX = moving ? Math.cos(walkTime * 0.5) * 0.012 : 0;
+const bobY = moving ? Math.abs(Math.sin(walkTime)) * 0.018 : 0;
 
-    weapon.rotation.x = smooth(
-        weapon.rotation.x,
-        0.02 + swayY * 0.4,
-        Math.min(1, delta * 8)
-    );
+weapon.position.x = smooth(
+    weapon.position.x,
+    0.48 - swayX + bobX,
+    Math.min(1, delta * 10)
+);
 
-    mouseDX *= 0.65;
-    mouseDY *= 0.65;
-}
+weapon.position.y = smooth(
+    weapon.position.y,
+    -0.37 - swayY - bobY,
+    Math.min(1, delta * 10)
+);
+
+weapon.rotation.y = smooth(
+    weapon.rotation.y,
+    -0.06 - swayX * 0.4,
+    Math.min(1, delta * 8)
+);
+
+weapon.rotation.x = smooth(
+    weapon.rotation.x,
+    0.02 + swayY * 0.4,
+    Math.min(1, delta * 8)
+);
+
+mouseDX *= 0.65;
+mouseDY *= 0.65;
 
 // ==========================================
 // MAIN LOOP
