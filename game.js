@@ -17,6 +17,8 @@ const camera = new THREE.PerspectiveCamera(
     100
 );
 
+scene.add(camera);
+
 camera.position.set(0, 1.7, 8);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
