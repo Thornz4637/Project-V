@@ -18,7 +18,6 @@ const camera = new THREE.PerspectiveCamera(
 );
 
 scene.add(camera);
-
 camera.position.set(0, 1.7, 8);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -42,33 +41,199 @@ mainLight.castShadow = true;
 scene.add(mainLight);
 
 // ==========================================
+// PROCEDURAL TEXTURES
+// ==========================================
+
+function makeSurfaceTexture(kind, baseColor, repeatX, repeatY) {
+    const size = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, size, size);
+
+    const image = ctx.getImageData(0, 0, size, size);
+    const pixels = image.data;
+
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            const i = (y * size + x) * 4;
+            const n = (Math.random() - 0.5) * (kind === "metal" ? 30 : 38);
+
+            pixels[i] = Math.max(0, Math.min(255, pixels[i] + n));
+            pixels[i + 1] = Math.max(0, Math.min(255, pixels[i + 1] + n));
+            pixels[i + 2] = Math.max(0, Math.min(255, pixels[i + 2] + n));
+        }
+    }
+
+    ctx.putImageData(image, 0, 0);
+
+    if (kind === "wood") {
+        for (let i = 0; i < 95; i++) {
+            const y = Math.random() * size;
+
+            ctx.strokeStyle = `rgba(25, 13, 6, ${0.035 + Math.random() * 0.12})`;
+            ctx.lineWidth = 1 + Math.random() * 3;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.bezierCurveTo(
+                size * 0.25, y + (Math.random() - 0.5) * 18,
+                size * 0.7, y + (Math.random() - 0.5) * 18,
+                size, y + (Math.random() - 0.5) * 12
+            );
+            ctx.stroke();
+        }
+
+        for (let i = 0; i < 12; i++) {
+            const x = Math.random() * size;
+            const y = Math.random() * size;
+
+            ctx.strokeStyle = "rgba(30, 17, 8, 0.22)";
+            ctx.beginPath();
+            ctx.ellipse(
+                x, y,
+                5 + Math.random() * 9,
+                2 + Math.random() * 4,
+                0, 0, Math.PI * 2
+            );
+            ctx.stroke();
+        }
+
+    } else if (kind === "metal") {
+        for (let i = 0; i < 240; i++) {
+            const x = Math.random() * size;
+            const y = Math.random() * size;
+            const len = 4 + Math.random() * 65;
+
+            ctx.strokeStyle = Math.random() > 0.5
+                ? "rgba(220,230,235,0.10)"
+                : "rgba(0,0,0,0.20)";
+
+            ctx.lineWidth = 0.5 + Math.random() * 1.4;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + len, y + (Math.random() - 0.5) * 2);
+            ctx.stroke();
+        }
+
+    } else {
+        for (let i = 0; i < 100; i++) {
+            const x = Math.random() * size;
+            const y = Math.random() * size;
+            const radius = 8 + Math.random() * 65;
+
+            const gradient = ctx.createRadialGradient(
+                x, y, 0, x, y, radius
+            );
+
+            gradient.addColorStop(
+                0,
+                kind === "floor"
+                    ? "rgba(8,10,12,0.20)"
+                    : "rgba(8,10,12,0.15)"
+            );
+
+            gradient.addColorStop(1, "rgba(8,10,12,0)");
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(
+                x - radius,
+                y - radius,
+                radius * 2,
+                radius * 2
+            );
+        }
+
+        for (let i = 0; i < 90; i++) {
+            const x = Math.random() * size;
+            const y = Math.random() * size;
+
+            ctx.strokeStyle = "rgba(220,220,215,0.055)";
+            ctx.lineWidth = 0.5 + Math.random() * 1.2;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(
+                x + (Math.random() - 0.5) * 35,
+                y + 4 + Math.random() * 28
+            );
+            ctx.stroke();
+        }
+    }
+
+    const edge = ctx.createRadialGradient(
+        size / 2, size / 2, size * 0.18,
+        size / 2, size / 2, size * 0.72
+    );
+
+    edge.addColorStop(0, "rgba(0,0,0,0)");
+    edge.addColorStop(1, "rgba(0,0,0,0.16)");
+
+    ctx.fillStyle = edge;
+    ctx.fillRect(0, 0, size, size);
+
+    const texture = new THREE.CanvasTexture(canvas);
+
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(repeatX, repeatY);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+    return texture;
+}
+
+// Generate textures
+const concreteTexture = makeSurfaceTexture("concrete", "#777875", 3, 2);
+const darkConcreteTexture = makeSurfaceTexture("concrete", "#44484a", 3, 2);
+const floorTexture = makeSurfaceTexture("floor", "#555653", 7, 7);
+const woodTexture = makeSurfaceTexture("wood", "#896747", 2, 2);
+const metalTexture = makeSurfaceTexture("metal", "#41464a", 2, 3);
+
+// ==========================================
 // MATERIALS
 // ==========================================
 
 const concrete = new THREE.MeshStandardMaterial({
-    color: 0x55575a,
-    roughness: 0.95
+    color: 0xffffff,
+    map: concreteTexture,
+    bumpMap: concreteTexture,
+    bumpScale: 0.055,
+    roughness: 0.98
 });
 
 const darkConcrete = new THREE.MeshStandardMaterial({
-    color: 0x292d31,
-    roughness: 0.9
+    color: 0xffffff,
+    map: darkConcreteTexture,
+    bumpMap: darkConcreteTexture,
+    bumpScale: 0.045,
+    roughness: 0.96
 });
 
 const floorMaterial = new THREE.MeshStandardMaterial({
-    color: 0x393b3d,
-    roughness: 0.95
+    color: 0xffffff,
+    map: floorTexture,
+    bumpMap: floorTexture,
+    bumpScale: 0.035,
+    roughness: 0.98
 });
 
 const wood = new THREE.MeshStandardMaterial({
-    color: 0x715137,
-    roughness: 0.85
+    color: 0xffffff,
+    map: woodTexture,
+    bumpMap: woodTexture,
+    bumpScale: 0.035,
+    roughness: 0.9
 });
 
 const metal = new THREE.MeshStandardMaterial({
-    color: 0x24282d,
-    metalness: 0.7,
-    roughness: 0.4
+    color: 0xffffff,
+    map: metalTexture,
+    bumpMap: metalTexture,
+    bumpScale: 0.018,
+    metalness: 0.72,
+    roughness: 0.48
 });
 
 const black = new THREE.MeshStandardMaterial({
@@ -243,12 +408,10 @@ function collides(x, z) {
 const weapon = new THREE.Group();
 camera.add(weapon);
 
-// Dedicated weapon lighting
 const weaponLight = new THREE.PointLight(0xffffff, 2.2, 4);
 weaponLight.position.set(-1, 1, 1);
 camera.add(weaponLight);
 
-// Materials
 const gunBody = new THREE.MeshStandardMaterial({
     color: 0x25292d,
     metalness: 0.65,
@@ -346,7 +509,6 @@ gunPart(weapon, [0.025, 0.08, 0.23],
 gunPart(weapon, [0.075, 0.025, 0.38],
     [0, 0.205, -0.27], gunRubber, 0.008);
 
-// Force the weapon to render above the environment
 weapon.traverse(obj => {
     if (obj.isMesh) {
         obj.material = obj.material.clone();
@@ -355,7 +517,6 @@ weapon.traverse(obj => {
     }
 });
 
-// Weapon position
 weapon.position.set(0.48, -0.37, -0.72);
 weapon.rotation.set(0.02, -0.06, 0);
 
@@ -380,7 +541,6 @@ hud.style.cssText = `
 hud.innerHTML = "PROJECT-V<br>FPS: --";
 document.body.appendChild(hud);
 
-// Crosshair
 const crosshair = document.createElement("div");
 
 crosshair.style.cssText = `
@@ -464,48 +624,45 @@ function update(delta) {
     camera.rotation.y = yaw;
     camera.rotation.x = pitch;
 
-   // Weapon sway and walking animation
+    const swayX = THREE.MathUtils.clamp(
+        mouseDX * 0.0007, -0.08, 0.08
+    );
 
-const swayX = THREE.MathUtils.clamp(
-    mouseDX * 0.0007, -0.08, 0.08
-);
+    const swayY = THREE.MathUtils.clamp(
+        mouseDY * 0.0007, -0.08, 0.08
+    );
 
-const swayY = THREE.MathUtils.clamp(
-    mouseDY * 0.0007, -0.08, 0.08
-);
+    const bobX = moving ? Math.cos(walkTime * 0.5) * 0.012 : 0;
+    const bobY = moving ? Math.abs(Math.sin(walkTime)) * 0.018 : 0;
 
-const bobX = moving ? Math.cos(walkTime * 0.5) * 0.012 : 0;
-const bobY = moving ? Math.abs(Math.sin(walkTime)) * 0.018 : 0;
+    weapon.position.x = smooth(
+        weapon.position.x,
+        0.48 - swayX + bobX,
+        Math.min(1, delta * 10)
+    );
 
-weapon.position.x = smooth(
-    weapon.position.x,
-    0.48 - swayX + bobX,
-    Math.min(1, delta * 10)
-);
+    weapon.position.y = smooth(
+        weapon.position.y,
+        -0.37 - swayY - bobY,
+        Math.min(1, delta * 10)
+    );
 
-weapon.position.y = smooth(
-    weapon.position.y,
-    -0.37 - swayY - bobY,
-    Math.min(1, delta * 10)
-);
+    weapon.rotation.y = smooth(
+        weapon.rotation.y,
+        -0.06 - swayX * 0.4,
+        Math.min(1, delta * 8)
+    );
 
-weapon.rotation.y = smooth(
-    weapon.rotation.y,
-    -0.06 - swayX * 0.4,
-    Math.min(1, delta * 8)
-);
+    weapon.rotation.x = smooth(
+        weapon.rotation.x,
+        0.02 + swayY * 0.4,
+        Math.min(1, delta * 8)
+    );
 
-weapon.rotation.x = smooth(
-    weapon.rotation.x,
-    0.02 + swayY * 0.4,
-    Math.min(1, delta * 8)
-);
+    mouseDX *= 0.65;
+    mouseDY *= 0.65;
+}
 
-mouseDX *= 0.65;
-mouseDY *= 0.65;
-
-} //
-    
 // ==========================================
 // MAIN LOOP
 // ==========================================
