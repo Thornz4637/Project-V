@@ -1,301 +1,232 @@
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+import { RoundedBoxGeometry } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/geometries/RoundedBoxGeometry.js";
 
-// ================================================
+// ==========================================
 // PROJECT-V
-// Tactical FPS Prototype
-// ================================================
+// ==========================================
 
-// SCENE
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x17191c);
-scene.fog = new THREE.Fog(0x17191c, 25, 65);
+scene.fog = new THREE.Fog(0x17191c, 18, 55);
 
-// CAMERA
 const camera = new THREE.PerspectiveCamera(
-    75,
+    80,
     window.innerWidth / window.innerHeight,
     0.1,
-    500
+    100
 );
 
-// RENDERER
-const renderer = new THREE.WebGLRenderer({
-    antialias: true
-});
+camera.position.set(0, 1.7, 8);
 
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
-
-document.body.style.margin = "0";
-document.body.style.overflow = "hidden";
-document.body.style.background = "#17191c";
+renderer.toneMappingExposure = 1.15;
 document.body.appendChild(renderer.domElement);
 
-// ================================================
+// ==========================================
 // LIGHTING
-// ================================================
+// ==========================================
 
-scene.add(
-    new THREE.HemisphereLight(0xffffff, 0x34343a, 1.5)
-);
+scene.add(new THREE.HemisphereLight(0xb7c6d8, 0x252525, 1.5));
 
-const mainLight = new THREE.DirectionalLight(0xffffff, 1.5);
-mainLight.position.set(-8, 15, 8);
+const mainLight = new THREE.DirectionalLight(0xffffff, 2);
+mainLight.position.set(-8, 15, 5);
 mainLight.castShadow = true;
-mainLight.shadow.mapSize.set(2048, 2048);
 scene.add(mainLight);
 
-// ================================================
+// ==========================================
 // MATERIALS
-// ================================================
+// ==========================================
 
-const materials = {
-    concrete: new THREE.MeshStandardMaterial({
-        color: 0x656563,
-        roughness: 0.95
-    }),
+const concrete = new THREE.MeshStandardMaterial({
+    color: 0x55575a,
+    roughness: 0.95
+});
 
-    darkConcrete: new THREE.MeshStandardMaterial({
-        color: 0x393d40,
-        roughness: 0.95
-    }),
+const darkConcrete = new THREE.MeshStandardMaterial({
+    color: 0x292d31,
+    roughness: 0.9
+});
 
-    wood: new THREE.MeshStandardMaterial({
-        color: 0x806044,
-        roughness: 0.9
-    }),
+const floorMaterial = new THREE.MeshStandardMaterial({
+    color: 0x393b3d,
+    roughness: 0.95
+});
 
-    metal: new THREE.MeshStandardMaterial({
-        color: 0x454a4e,
-        metalness: 0.65,
-        roughness: 0.6
-    }),
+const wood = new THREE.MeshStandardMaterial({
+    color: 0x715137,
+    roughness: 0.85
+});
 
-    floor: new THREE.MeshStandardMaterial({
-        color: 0x555552,
-        roughness: 0.95
-    })
-};
+const metal = new THREE.MeshStandardMaterial({
+    color: 0x24282d,
+    metalness: 0.7,
+    roughness: 0.4
+});
 
-// ================================================
-// ARENA GEOMETRY
-// ================================================
+const black = new THREE.MeshStandardMaterial({
+    color: 0x101215,
+    metalness: 0.35,
+    roughness: 0.5
+});
+
+const polymer = new THREE.MeshStandardMaterial({
+    color: 0x292d30,
+    roughness: 0.8
+});
+
+const accent = new THREE.MeshStandardMaterial({
+    color: 0x50575c,
+    metalness: 0.6,
+    roughness: 0.45
+});
+
+// ==========================================
+// ARENA
+// ==========================================
 
 const obstacles = [];
 
-function createBox(x, y, z, width, height, depth, material) {
+function createBox(x, y, z, w, h, d, material, solid = true) {
+    const geometry = new THREE.BoxGeometry(w, h, d);
+    const mesh = new THREE.Mesh(geometry, material);
 
-    const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(width, height, depth),
-        material
-    );
-
-    mesh.position.set(
-        x,
-        y + height / 2,
-        z
-    );
-
+    mesh.position.set(x, y, z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-
     scene.add(mesh);
 
-    obstacles.push({
-        x,
-        z,
-        width,
-        depth
-    });
+    if (solid) {
+        obstacles.push({
+            minX: x - w / 2,
+            maxX: x + w / 2,
+            minZ: z - d / 2,
+            maxZ: z + d / 2
+        });
+    }
 
     return mesh;
 }
 
-// FLOOR
-const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(40, 40),
-    materials.floor
-);
+// Floor and ceiling
+createBox(0, -0.25, 0, 40, 0.5, 40, floorMaterial, false);
+createBox(0, 6, 0, 40, 0.3, 40, darkConcrete, false);
 
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
-scene.add(floor);
+// Outer walls
+createBox(0, 3, -20, 40, 6, 0.5, concrete);
+createBox(0, 3, 20, 40, 6, 0.5, concrete);
+createBox(-20, 3, 0, 0.5, 6, 40, concrete);
+createBox(20, 3, 0, 0.5, 6, 40, concrete);
 
-// CEILING
-const ceiling = new THREE.Mesh(
-    new THREE.PlaneGeometry(40, 40),
-    materials.darkConcrete
-);
+// Internal walls and corridors
+createBox(-11, 2, -8, 0.5, 4, 13, darkConcrete);
+createBox(-11, 2, 8, 0.5, 4, 13, darkConcrete);
 
-ceiling.rotation.x = -Math.PI / 2;
-ceiling.position.y = 5.5;
-scene.add(ceiling);
+createBox(10, 2, -10, 0.5, 4, 12, darkConcrete);
+createBox(10, 2, 8, 0.5, 4, 12, darkConcrete);
 
-// OUTER WALLS
-createBox(0, 0, -20, 40, 5.5, 1, materials.concrete);
-createBox(0, 0, 20, 40, 5.5, 1, materials.concrete);
-createBox(-20, 0, 0, 1, 5.5, 40, materials.concrete);
-createBox(20, 0, 0, 1, 5.5, 40, materials.concrete);
+createBox(0, 2, -11, 10, 4, 0.5, concrete);
+createBox(4, 2, 3, 8, 4, 0.5, darkConcrete);
 
-// INTERIOR WALLS
-createBox(-12, 0, -7, 14, 4, 0.4, materials.concrete);
-createBox(12, 0, -7, 14, 4, 0.4, materials.concrete);
+// Cover
+createBox(-5, 0.8, -3, 3, 1.6, 1.2, wood);
+createBox(5, 0.8, -5, 3, 1.6, 1.2, wood);
+createBox(-5, 0.8, 7, 3, 1.6, 1.2, wood);
+createBox(6, 0.8, 9, 3, 1.6, 1.2, wood);
 
-createBox(-10, 0, 5, 10, 4, 0.4, materials.concrete);
-createBox(10, 0, 5, 10, 4, 0.4, materials.concrete);
+createBox(0, 0.7, 0, 2.5, 1.4, 1, darkConcrete);
+createBox(-2, 0.6, -8, 2, 1.2, 1, wood);
+createBox(8, 0.6, -2, 1.5, 1.2, 2, wood);
 
-createBox(-7, 0, -13, 0.4, 4, 10, materials.concrete);
-createBox(7, 0, -13, 0.4, 4, 10, materials.concrete);
+// Metal support pillars
+for (const x of [-15, -5, 5, 15]) {
+    for (const z of [-15, 0, 15]) {
+        createBox(x, 3, z, 0.35, 6, 0.35, metal);
+    }
+}
 
-// WOODEN BARRICADES
-createBox(-5, 0, 0, 3, 1.5, 0.3, materials.wood);
-createBox(5, 0, -2, 3, 1.5, 0.3, materials.wood);
-
-createBox(-10, 0, 12, 3, 1.5, 0.3, materials.wood);
-createBox(10, 0, 12, 3, 1.5, 0.3, materials.wood);
-
-// CRATES
-createBox(-12, 0, -12, 2, 1.5, 2, materials.wood);
-createBox(12, 0, -12, 2, 1.5, 2, materials.wood);
-
-createBox(-3, 0, -16, 2, 1.5, 2, materials.wood);
-createBox(3, 0, -16, 2, 1.5, 2, materials.wood);
-
-// CENTRAL COVER
-createBox(0, 0, -1, 1.5, 1.2, 3, materials.metal);
-
-// METAL SUPPORTS
-createBox(-17, 0, -17, 0.5, 5.5, 0.5, materials.metal);
-createBox(17, 0, -17, 0.5, 5.5, 0.5, materials.metal);
-createBox(-17, 0, 17, 0.5, 5.5, 0.5, materials.metal);
-createBox(17, 0, 17, 0.5, 5.5, 0.5, materials.metal);
-
-// ================================================
-// INDUSTRIAL LIGHTS
-// ================================================
-
-for (let x = -12; x <= 12; x += 12) {
-    for (let z = -12; z <= 12; z += 12) {
-
-        const light = new THREE.PointLight(
-            0xffe8ce,
-            35,
-            18
-        );
-
-        light.position.set(x, 4.8, z);
+// Ceiling lights
+for (const x of [-12, 0, 12]) {
+    for (const z of [-12, 0, 12]) {
+        const light = new THREE.PointLight(0xdde8ff, 35, 12);
+        light.position.set(x, 5.5, z);
         scene.add(light);
 
         const fixture = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 0.12, 0.5),
-            new THREE.MeshBasicMaterial({
-                color: 0xffe8ce
-            })
+            new THREE.BoxGeometry(2.5, 0.12, 0.5),
+            new THREE.MeshBasicMaterial({ color: 0xdce6f0 })
         );
 
-        fixture.position.set(x, 5.2, z);
+        fixture.position.set(x, 5.85, z);
         scene.add(fixture);
     }
 }
 
-// ================================================
+// ==========================================
 // PLAYER
-// ================================================
+// ==========================================
 
 const player = {
     x: 0,
     y: 0,
     z: 8,
-
     velocityY: 0,
-
     speed: 4.5,
     jumpForce: 7.5,
-    gravity: 22,
-
     height: 1.7,
     radius: 0.35,
-
     grounded: true
 };
-
-camera.position.set(
-    player.x,
-    player.height,
-    player.z
-);
 
 let yaw = 0;
 let pitch = 0;
 
 const keys = {};
+let mouseDX = 0;
+let mouseDY = 0;
 
-// ================================================
-// INPUT
-// ================================================
+document.addEventListener("keydown", e => {
+    keys[e.code] = true;
+});
 
-window.addEventListener("keydown", (event) => {
-    keys[event.code] = true;
+document.addEventListener("keyup", e => {
+    keys[e.code] = false;
+});
 
-    if (event.code === "Space") {
-        event.preventDefault();
+document.addEventListener("mousemove", e => {
+    if (document.pointerLockElement === renderer.domElement) {
+        yaw -= e.movementX * 0.002;
+        pitch -= e.movementY * 0.002;
+
+        pitch = Math.max(-1.5, Math.min(1.5, pitch));
+
+        mouseDX += e.movementX;
+        mouseDY += e.movementY;
     }
 });
-
-window.addEventListener("keyup", (event) => {
-    keys[event.code] = false;
-});
-
-window.addEventListener("blur", () => {
-    for (const key in keys) {
-        keys[key] = false;
-    }
-});
-
-// ================================================
-// MOUSE LOOK
-// ================================================
 
 renderer.domElement.addEventListener("click", () => {
     renderer.domElement.requestPointerLock();
 });
 
-document.addEventListener("mousemove", (event) => {
-
-    if (document.pointerLockElement !== renderer.domElement) {
-        return;
-    }
-
-    yaw -= event.movementX * 0.002;
-    pitch -= event.movementY * 0.002;
-
-    pitch = Math.max(-1.5, Math.min(1.5, pitch));
-});
-
-// ================================================
+// ==========================================
 // COLLISION
-// ================================================
+// ==========================================
 
 function collides(x, z) {
+    for (const box of obstacles) {
+        const closestX = Math.max(box.minX, Math.min(x, box.maxX));
+        const closestZ = Math.max(box.minZ, Math.min(z, box.maxZ));
 
-    for (const obstacle of obstacles) {
+        const dx = x - closestX;
+        const dz = z - closestZ;
 
-        const overlapX =
-            Math.abs(x - obstacle.x) <
-            player.radius + obstacle.width / 2;
-
-        const overlapZ =
-            Math.abs(z - obstacle.z) <
-            player.radius + obstacle.depth / 2;
-
-        if (overlapX && overlapZ) {
+        if (dx * dx + dz * dz < player.radius * player.radius) {
             return true;
         }
     }
@@ -303,69 +234,188 @@ function collides(x, z) {
     return false;
 }
 
-// ================================================
-// MOVEMENT
-// ================================================
+// ==========================================
+// FICTIONAL COMPACT SMG VIEW MODEL
+// ==========================================
 
-function updatePlayer(delta) {
+const weapon = new THREE.Group();
+camera.add(weapon);
 
-    let forward = 0;
-    let sideways = 0;
+// Rounded parts make the prop feel like one designed object.
+function roundedPart(parent, size, position, material, radius = 0.06) {
+    const geometry = new RoundedBoxGeometry(
+        size[0], size[1], size[2], 3, radius
+    );
 
-    if (keys["KeyW"]) forward++;
-    if (keys["KeyS"]) forward--;
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(...position);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    parent.add(mesh);
 
-    if (keys["KeyD"]) sideways++;
-    if (keys["KeyA"]) sideways--;
+    return mesh;
+}
 
-    const length = Math.hypot(forward, sideways);
+function cylinderPart(parent, radiusTop, radiusBottom, length, position, material) {
+    const geometry = new THREE.CylinderGeometry(
+        radiusTop, radiusBottom, length, 20
+    );
 
-    if (length > 0) {
-        forward /= length;
-        sideways /= length;
+    const mesh = new THREE.Mesh(geometry, material);
+
+    // Cylinders normally point up; rotate them to point forward.
+    mesh.rotation.x = Math.PI / 2;
+    mesh.position.set(...position);
+    parent.add(mesh);
+
+    return mesh;
+}
+
+// Main receiver
+roundedPart(weapon, [0.23, 0.22, 0.58], [0, 0, 0], polymer, 0.055);
+
+// Upper housing
+roundedPart(weapon, [0.20, 0.12, 0.48], [0, 0.13, -0.035], metal, 0.045);
+
+// Front handguard
+roundedPart(weapon, [0.21, 0.17, 0.34], [0, -0.015, -0.38], black, 0.055);
+
+// Rear stock
+roundedPart(weapon, [0.19, 0.15, 0.27], [0, 0.015, 0.39], polymer, 0.045);
+roundedPart(weapon, [0.22, 0.20, 0.08], [0, 0.015, 0.55], black, 0.035);
+
+// Fictional front barrel housing
+cylinderPart(weapon, 0.045, 0.045, 0.28, [0, 0.035, -0.64], metal);
+cylinderPart(weapon, 0.065, 0.065, 0.09, [0, 0.035, -0.81], black);
+
+// Magazine
+roundedPart(weapon, [0.13, 0.31, 0.17], [0, -0.245, 0.04], black, 0.055);
+roundedPart(weapon, [0.14, 0.035, 0.18], [0, -0.405, 0.04], metal, 0.025);
+
+// Grip
+const grip = roundedPart(
+    weapon, [0.13, 0.26, 0.15], [0, -0.22, 0.23], polymer, 0.045
+);
+grip.rotation.x = -0.18;
+
+// Small optic
+roundedPart(weapon, [0.13, 0.07, 0.14], [0, 0.245, -0.06], black, 0.025);
+roundedPart(weapon, [0.085, 0.085, 0.085], [0, 0.31, -0.06], accent, 0.025);
+
+// Optic lens
+const lens = new THREE.Mesh(
+    new THREE.BoxGeometry(0.065, 0.055, 0.012),
+    new THREE.MeshBasicMaterial({ color: 0x83b9c9 })
+);
+lens.position.set(0, 0.31, -0.105);
+weapon.add(lens);
+
+// Side detailing
+roundedPart(weapon, [0.025, 0.07, 0.22], [0.125, 0.025, -0.34], accent, 0.01);
+roundedPart(weapon, [0.025, 0.045, 0.16], [-0.125, 0.025, -0.32], metal, 0.01);
+
+// Small top rail
+roundedPart(weapon, [0.07, 0.025, 0.34], [0, 0.215, -0.28], black, 0.01);
+
+// Position in the camera view
+weapon.position.set(0.34, -0.32, -0.58);
+weapon.rotation.set(0.02, -0.04, 0);
+
+// ==========================================
+// HUD
+// ==========================================
+
+const hud = document.createElement("div");
+
+hud.style.cssText = `
+    position: fixed;
+    top: 14px;
+    left: 16px;
+    color: #e7edf2;
+    font: 14px monospace;
+    background: rgba(0,0,0,0.45);
+    padding: 9px 12px;
+    border-radius: 4px;
+    pointer-events: none;
+`;
+
+hud.innerHTML = "PROJECT-V<br>FPS: --";
+document.body.appendChild(hud);
+
+// Crosshair
+const crosshair = document.createElement("div");
+
+crosshair.style.cssText = `
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    background: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+`;
+
+document.body.appendChild(crosshair);
+
+// ==========================================
+// MOVEMENT + WEAPON ANIMATION
+// ==========================================
+
+const clock = new THREE.Clock();
+
+let fpsFrames = 0;
+let fpsTimer = 0;
+let fps = 0;
+let walkTime = 0;
+
+const smooth = (a, b, t) => a + (b - a) * t;
+
+function update(delta) {
+    const forward = new THREE.Vector3(
+        -Math.sin(yaw), 0, -Math.cos(yaw)
+    );
+
+    const right = new THREE.Vector3(
+        Math.cos(yaw), 0, -Math.sin(yaw)
+    );
+
+    const move = new THREE.Vector3();
+
+    if (keys["KeyW"]) move.add(forward);
+    if (keys["KeyS"]) move.sub(forward);
+    if (keys["KeyD"]) move.add(right);
+    if (keys["KeyA"]) move.sub(right);
+
+    const moving = move.lengthSq() > 0;
+
+    if (moving) {
+        move.normalize().multiplyScalar(player.speed * delta);
+
+        const nextX = player.x + move.x;
+        const nextZ = player.z + move.z;
+
+        if (!collides(nextX, player.z)) player.x = nextX;
+        if (!collides(player.x, nextZ)) player.z = nextZ;
+
+        walkTime += delta * 9;
     }
 
-    const moveX =
-        (-Math.sin(yaw) * forward +
-        Math.cos(yaw) * sideways) *
-        player.speed * delta;
-
-    const moveZ =
-        (-Math.cos(yaw) * forward -
-        Math.sin(yaw) * sideways) *
-        player.speed * delta;
-
-    // HORIZONTAL COLLISION
-    const nextX = player.x + moveX;
-
-    if (!collides(nextX, player.z)) {
-        player.x = nextX;
-    }
-
-    const nextZ = player.z + moveZ;
-
-    if (!collides(player.x, nextZ)) {
-        player.z = nextZ;
-    }
-
-    // JUMP
     if (keys["Space"] && player.grounded) {
         player.velocityY = player.jumpForce;
         player.grounded = false;
     }
 
-    // GRAVITY
-    player.velocityY -= player.gravity * delta;
+    player.velocityY -= 22 * delta;
     player.y += player.velocityY * delta;
 
-    // GROUND DETECTION
     if (player.y <= 0) {
         player.y = 0;
         player.velocityY = 0;
         player.grounded = true;
     }
 
-    // CAMERA
     camera.position.set(
         player.x,
         player.y + player.height,
@@ -375,101 +425,71 @@ function updatePlayer(delta) {
     camera.rotation.order = "YXZ";
     camera.rotation.y = yaw;
     camera.rotation.x = pitch;
-}
 
-// ================================================
-// CROSSHAIR
-// ================================================
+    // Weapon sway
+    const swayX = THREE.MathUtils.clamp(mouseDX * 0.0007, -0.08, 0.08);
+    const swayY = THREE.MathUtils.clamp(mouseDY * 0.0007, -0.08, 0.08);
 
-const crosshair = document.createElement("div");
-
-crosshair.innerHTML = "+";
-
-Object.assign(crosshair.style, {
-    position: "fixed",
-    left: "50%",
-    top: "50%",
-    transform: "translate(-50%, -50%)",
-    color: "white",
-    fontSize: "22px",
-    fontFamily: "Arial",
-    fontWeight: "300",
-    pointerEvents: "none",
-    textShadow: "0 0 4px black",
-    zIndex: "10"
-});
-
-document.body.appendChild(crosshair);
-
-// ================================================
-// FPS COUNTER
-// ================================================
-
-const fpsDisplay = document.createElement("div");
-
-Object.assign(fpsDisplay.style, {
-    position: "fixed",
-    top: "12px",
-    left: "12px",
-    color: "#b9c5bd",
-    fontSize: "13px",
-    fontFamily: "monospace",
-    pointerEvents: "none",
-    zIndex: "10"
-});
-
-document.body.appendChild(fpsDisplay);
-
-let frames = 0;
-let fpsTimer = 0;
-
-// ================================================
-// GAME LOOP
-// ================================================
-
-let previousTime = 0;
-
-function animate(time) {
-
-    requestAnimationFrame(animate);
-
-    const delta = Math.min(
-        (time - previousTime) / 1000,
-        0.05
+    weapon.position.x = smooth(
+        weapon.position.x,
+        0.34 - swayX,
+        Math.min(1, delta * 10)
     );
 
-    previousTime = time;
+    weapon.position.y = smooth(
+        weapon.position.y,
+        -0.32 - swayY + (moving ? Math.sin(walkTime) * 0.012 : 0),
+        Math.min(1, delta * 10)
+    );
 
-    updatePlayer(delta);
+    weapon.rotation.y = smooth(
+        weapon.rotation.y,
+        -0.04 - swayX * 0.4,
+        Math.min(1, delta * 8)
+    );
 
-    frames++;
+    weapon.rotation.x = smooth(
+        weapon.rotation.x,
+        0.02 + swayY * 0.4,
+        Math.min(1, delta * 8)
+    );
+
+    mouseDX *= 0.65;
+    mouseDY *= 0.65;
+}
+
+// ==========================================
+// MAIN LOOP
+// ==========================================
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    const delta = Math.min(clock.getDelta(), 0.05);
+
+    update(delta);
+
+    fpsFrames++;
     fpsTimer += delta;
 
     if (fpsTimer >= 0.5) {
-        fpsDisplay.textContent = `FPS: ${Math.round(frames / fpsTimer)}`;
-
-        frames = 0;
+        fps = Math.round(fpsFrames / fpsTimer);
+        hud.innerHTML = `PROJECT-V<br>FPS: ${fps}`;
+        fpsFrames = 0;
         fpsTimer = 0;
     }
 
     renderer.render(scene, camera);
 }
 
-requestAnimationFrame(animate);
+animate();
 
-// ================================================
+// ==========================================
 // RESIZE
-// ================================================
+// ==========================================
 
 window.addEventListener("resize", () => {
-
-    camera.aspect =
-        window.innerWidth / window.innerHeight;
-
+    camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-
-    renderer.setSize(
-        window.innerWidth,
-        window.innerHeight
-    );
+    renderer.setSize(window.innerWidth, window.innerHeight);
 });
